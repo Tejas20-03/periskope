@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+// Create a component that uses useSearchParams
+function ResetPasswordContent() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -177,5 +178,30 @@ export default function ResetPasswordPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-white p-4">
+            <div className="w-full max-w-md text-center">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="w-16 h-16 bg-gray-300 rounded-full mb-4"></div>
+                    <div className="h-8 bg-gray-300 rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2 mb-8"></div>
+                    <div className="h-12 bg-gray-300 rounded w-full"></div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Main component with Suspense boundary
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <ResetPasswordContent />
+        </Suspense>
     );
 }
