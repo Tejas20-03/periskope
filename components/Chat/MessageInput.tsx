@@ -24,9 +24,15 @@ const MessageInput = ({ onSendMessage }: MessageInputProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
+      console.log("Sending message:", message);
       onSendMessage(message);
       setMessage("");
       setIsTyping(false);
+
+      // Focus the input after sending
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 

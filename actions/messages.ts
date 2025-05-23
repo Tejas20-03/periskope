@@ -36,7 +36,8 @@ export async function getMessages(
   } catch (error) {
     return {
       messages: null,
-      error: error instanceof Error ? error.message : "Failed to fetch messages",
+      error:
+        error instanceof Error ? error.message : "Failed to fetch messages",
     };
   }
 }
@@ -52,12 +53,15 @@ export async function sendMessage(
   try {
     const supabase = await createClient();
 
+    const messageId = uuidv4();
+    const timestamp = new Date().toISOString();
+
     const newMessage = {
-      id: uuidv4(),
+      id: messageId,
       sender: senderId,
       receiver: receiverId,
       text,
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp,
       read: false,
     };
 
@@ -68,6 +72,7 @@ export async function sendMessage(
       .single();
 
     if (error) {
+      console.error("Database error when sending message:", error);
       return { message: null, error: error.message };
     }
 
@@ -79,6 +84,7 @@ export async function sendMessage(
 
     return { message: formattedMessage, error: null };
   } catch (error) {
+    console.error("Exception when sending message:", error);
     return {
       message: null,
       error: error instanceof Error ? error.message : "Failed to send message",
@@ -111,7 +117,10 @@ export async function markMessagesAsRead(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to mark messages as read",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to mark messages as read",
     };
   }
 }

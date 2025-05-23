@@ -144,7 +144,7 @@ export default function ChatDashboard() {
     }
   };
 
-  // Setup real-time subscription
+  // Update the setupRealtimeSubscription function
   const setupRealtimeSubscription = () => {
     if (!currentUser || !selectedUser) return;
 
@@ -153,18 +153,19 @@ export default function ChatDashboard() {
       supabase.removeChannel(subscriptionRef.current);
     }
 
-    // Create new subscription
+    // Create new subscription with a more specific channel name
     const channel = supabase
-      .channel(`chat-${currentUser.id}-${selectedUser.id}`)
+      .channel(`chat-${currentUser.id}-${selectedUser.id}-${Date.now()}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `and(or(sender.eq.${currentUser.id},sender.eq.${selectedUser.id}),or(receiver.eq.${currentUser.id},receiver.eq.${selectedUser.id}))`,
+          filter: `or(and(sender.eq.${currentUser.id},receiver.eq.${selectedUser.id}),and(sender.eq.${selectedUser.id},receiver.eq.${currentUser.id}))`,
         },
         (payload) => {
+          console.log("New message received:", payload);
           const newMessage = {
             ...payload.new,
             timestamp: new Date(payload.new.timestamp),
@@ -187,29 +188,9 @@ export default function ChatDashboard() {
           }
         }
       )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-          filter: `and(or(sender.eq.${currentUser.id},sender.eq.${selectedUser.id}),or(receiver.eq.${currentUser.id},receiver.eq.${selectedUser.id}))`,
-        },
-        (payload) => {
-          const updatedMessage = {
-            ...payload.new,
-            timestamp: new Date(payload.new.timestamp),
-          } as Message;
-
-          // Update the message in the list
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === updatedMessage.id ? updatedMessage : msg
-            )
-          );
-        }
-      )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     subscriptionRef.current = channel;
   };
@@ -237,13 +218,17 @@ export default function ChatDashboard() {
     }
   }, [selectedUser, currentUser]);
 
+  // Update the handleSendMessage function
   const handleSendMessage = async (text: string) => {
     if (!currentUser || !selectedUser) return;
 
     try {
+      // Generate a temporary ID for optimistic update
+      const tempId = `temp-${Date.now()}`;
+
       // Optimistically add message to UI
       const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         sender: currentUser.id,
         receiver: selectedUser.id,
         text,
@@ -261,22 +246,21 @@ export default function ChatDashboard() {
 
       if (sendError) {
         // Remove optimistic message if there was an error
-        setMessages((prev) =>
-          prev.filter((msg) => msg.id !== optimisticMessage.id)
-        );
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
         setError(sendError);
+        console.error("Error sending message:", sendError);
         return;
       }
 
-      // Replace optimistic message with real one if needed
-      // (though the real-time subscription should handle this)
+      // Replace optimistic message with real one
       if (message) {
         setMessages((prev) =>
-          prev.map((msg) => (msg.id === optimisticMessage.id ? message : msg))
+          prev.map((msg) => (msg.id === tempId ? message : msg))
         );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
+      console.error("Error in handleSendMessage:", err);
     }
   };
 
