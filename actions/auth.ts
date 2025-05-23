@@ -6,22 +6,22 @@ import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 import { SignInForm, SignUpForm } from "@/types";
 
-export async function signUp(formData: SignUpForm) {
+export async function signUp(formData: FormData) {
   const supabase = createClient();
-  const credentials = {
-    username: formData.name,
-    email: formData.email,
-    password: formData.password,
-  };
+
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const phoneNumber = formData.get("phoneNumber") as string;
 
   const { error, data } = await (
     await supabase
   ).auth.signUp({
-    email: credentials.email,
-    password: credentials.password,
+    email,
+    password,
     options: {
       data: {
-        username: credentials.username,
+        username: name,
       },
     },
   });
@@ -37,6 +37,24 @@ export async function signUp(formData: SignUpForm) {
       user: null,
     };
   }
+  const { error: profileError } = await (await supabase)
+    .from("user_profiles")
+    .insert({
+      email: email,
+      username: name,
+      phone_number: phoneNumber,
+      groups: [],
+      last_seen: new Date().toISOString(),
+      status: "offline",
+    });
+
+  if (profileError) {
+    return {
+      status: `Profile creation failed: ${profileError.message}`,
+      user: null,
+    };
+  }
+
   revalidatePath("/", "layout");
   return {
     status: "success",
@@ -74,10 +92,32 @@ export async function signIn(formData: SignInForm) {
       .insert({
         email: data?.user?.email,
         username: data?.user?.user_metadata.username,
+        phone_number: data?.user?.user_metadata.phoneNumber,
+        avatar_url: data?.user?.user_metadata.avatarUrl,
+        groups: data?.user?.user_metadata.groups || [],
+        last_seen: new Date().toISOString(),
+        status: "online",
       });
     if (insertError) {
       return {
         status: insertError?.message,
+        user: null,
+      };
+    }
+  } else {
+    const { error: updateError } = await (
+      await supabase
+    )
+      .from("user_profiles")
+      .update({
+        status: "online",
+        last_seen: new Date().toISOString(),
+      })
+      .eq("email", credentials?.email);
+
+    if (updateError) {
+      return {
+        status: updateError?.message,
         user: null,
       };
     }
@@ -92,6 +132,23 @@ export async function signIn(formData: SignInForm) {
 
 export async function signOut() {
   const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await (await supabase).auth.getUser();
+
+  if (user) {
+    await (
+      await supabase
+    )
+      .from("user_profiles")
+      .update({
+        status: "offline",
+        last_seen: new Date().toISOString(),
+      })
+      .eq("email", user.email);
+  }
+
   const { error } = await (await supabase).auth.signOut();
   if (error) {
     redirect("/error");
