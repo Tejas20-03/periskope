@@ -1,5 +1,16 @@
-import React, { useState } from "react";
-import { FiSend, FiPaperclip, FiSmile } from "react-icons/fi";
+import React, { useState, useRef } from "react";
+import {
+  FiSend,
+  FiPaperclip,
+  FiSmile,
+  FiClock,
+  FiChevronDown,
+} from "react-icons/fi";
+import { BsStars } from "react-icons/bs";
+import { PiClockClockwiseFill } from "react-icons/pi";
+import { FaSquarePollHorizontal, FaMicrophone } from "react-icons/fa6";
+
+import Image from "next/image";
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -7,44 +18,107 @@ interface MessageInputProps {
 
 const MessageInput = ({ onSendMessage }: MessageInputProps) => {
   const [message, setMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
       onSendMessage(message);
       setMessage("");
+      setIsTyping(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Set typing indicator
+    if (value.length > 0 && !isTyping) {
+      setIsTyping(true);
+    } else if (value.length === 0 && isTyping) {
+      setIsTyping(false);
     }
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-200">
-      <form onSubmit={handleSubmit} className="flex items-center">
-        <button
-          type="button"
-          className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-        >
-          <FiPaperclip className="h-5 w-5" />
-        </button>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 mx-2 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-        <button
-          type="button"
-          className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-        >
-          <FiSmile className="h-5 w-5" />
-        </button>
-        <button
-          type="submit"
-          className="ml-2 p-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <FiSend className="h-5 w-5" />
-        </button>
-      </form>
+    <div className="p-3 bg-white ">
+      <div className="rounded-lg  overflow-hidden">
+        {/* Top row: Message input and send button */}
+        <div className="flex items-center p-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={message}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Message..."
+            className="flex-1 p-2 focus:outline-none border-none text-gray-700"
+            style={{ border: "none" }}
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!message.trim()}
+            className={`p-2 rounded-full text-green-500 hover:bg-green-50 `}
+          >
+            <FiSend className="h-5 w-5 transform rotate-45" />
+          </button>
+        </div>
+
+        {/* Bottom row: Various icons and Periskope dropdown */}
+        <div className="flex items-center justify-between bg-gray-50 p-2 ">
+          <div className="flex space-x-6">
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <FiPaperclip className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <FiSmile className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <FiClock className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <PiClockClockwiseFill className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <BsStars className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <FaSquarePollHorizontal className="h-5 w-5" />
+            </button>
+            <button className="text-gray-600 hover:text-gray-800 focus:outline-none">
+              <FaMicrophone className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center">
+            <button className="flex items-center space-x-2 px-3 py-1 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+              <div className="w-5 h-5 flex items-center justify-center">
+                <Image
+                  src="/logo.png"
+                  alt="Periskope Logo"
+                  width={20}
+                  height={20}
+                  className="rounded-full"
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-700">
+                Periskope
+              </span>
+              <FiChevronDown className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
